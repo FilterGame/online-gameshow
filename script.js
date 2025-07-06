@@ -40,11 +40,11 @@ document.addEventListener('DOMContentLoaded', () => {
             avatars = avatarsData;
             booths = boothsData;
             
-            // Initialize characters with pixel positions and no animation frame
             npcsData.forEach(npc => {
                  characters.push({
                     ...npc,
                     type: 'npc',
+                    position: { ...npc.position }, // Grid position
                     currentPixelPos: { x: npc.position.x * GRID_CELL_SIZE, y: npc.position.y * GRID_CELL_SIZE },
                     animationFrameId: null
                 });
@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         spawnPlayer();
         renderAll();
         startNpcBehavior();
-        centerCameraOnPlayer(true); // Initial camera position (instant)
+        centerCameraOnPlayer(); // Initial camera position
     }
 
     function spawnPlayer() {
@@ -155,11 +155,12 @@ document.addEventListener('DOMContentLoaded', () => {
             charEl.className = 'character';
             charEl.id = char.id;
             if (char.type === 'player') charEl.classList.add('user-player');
-
-            // Set initial position from pixel coordinates
+            
             const charSize = 50;
-            charEl.style.left = `${char.currentPixelPos.x + (GRID_CELL_SIZE - charSize) / 2}px`;
-            charEl.style.top = `${char.currentPixelPos.y + (GRID_CELL_SIZE - charSize) / 2}px`;
+            const pixelX = char.currentPixelPos.x + (GRID_CELL_SIZE - charSize) / 2;
+            const pixelY = char.currentPixelPos.y + (GRID_CELL_SIZE - charSize) / 2;
+
+            charEl.style.transform = `translate(${pixelX}px, ${pixelY}px)`;
 
             charEl.innerHTML = `
                 <div class="character-name">${char.name}</div>
@@ -167,12 +168,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="character-speech-bubble" id="speech-${char.id}"></div>
             `;
             map.appendChild(charEl);
-            char.element = charEl; // Store element reference
+            char.element = charEl;
         });
     }
 
-    // --- NEW: Camera Control ---
-    function centerCameraOnPlayer(instant = false) {
+    // --- Camera Control ---
+    function centerCameraOnPlayer() {
         if (!player || !player.currentPixelPos) return;
 
         const playerCenterX = player.currentPixelPos.x + GRID_CELL_SIZE / 2;
@@ -188,31 +189,22 @@ document.addEventListener('DOMContentLoaded', () => {
         targetX = Math.max(0, Math.min(targetX, map.scrollWidth - viewportWidth));
         targetY = Math.max(0, Math.min(targetY, map.scrollHeight - viewportHeight));
         
-        if (instant) {
-            mapContainer.scrollLeft = targetX;
-            mapContainer.scrollTop = targetY;
-        } else {
-             mapContainer.scrollTo({
-                left: targetX,
-                top: targetY,
-                behavior: 'smooth' 
-             });
-        }
+        mapContainer.scrollLeft = targetX;
+        mapContainer.scrollTop = targetY;
     }
 
-    // --- NEW: Character Movement (ANIMATED) ---
+    // --- Character Movement (ANIMATED) ---
     function moveTo(charId, targetPixelPos) {
         const character = characters.find(c => c.id === charId);
         if (!character) return;
 
         const startPos = { ...character.currentPixelPos };
         const distance = Math.sqrt(Math.pow(targetPixelPos.x - startPos.x, 2) + Math.pow(targetPixelPos.y - startPos.y, 2));
-        if (distance < 1) return; // Already there
+        if (distance < 1) return;
 
         const duration = (distance / CHARACTER_SPEED) * 1000;
         let startTime = null;
 
-        // Cancel any previous movement animation
         if (character.animationFrameId) {
             cancelAnimationFrame(character.animationFrameId);
         }
@@ -222,16 +214,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const elapsed = timestamp - startTime;
             const progress = Math.min(elapsed / duration, 1);
 
-            // Linear interpolation
             character.currentPixelPos.x = startPos.x + (targetPixelPos.x - startPos.x) * progress;
             character.currentPixelPos.y = startPos.y + (targetPixelPos.y - startPos.y) * progress;
 
-            // Update element's visual position
             const charSize = 50;
-            character.element.style.left = `${character.currentPixelPos.x + (GRID_CELL_SIZE - charSize) / 2}px`;
-            character.element.style.top = `${character.currentPixelPos.y + (GRID_CELL_SIZE - charSize) / 2}px`;
+            const pixelX = character.currentPixelPos.x + (GRID_CELL_SIZE - charSize) / 2;
+            const pixelY = character.currentPixelPos.y + (GRID_CELL_SIZE - charSize) / 2;
+            character.element.style.transform = `translate(${pixelX}px, ${pixelY}px)`;
             
-            // If it's the player, move the camera
             if (character.type === 'player') {
                 centerCameraOnPlayer();
             }
@@ -239,7 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (progress < 1) {
                 character.animationFrameId = requestAnimationFrame(step);
             } else {
-                // Animation finished, update logical grid position
                 character.position = {
                     x: Math.round(character.currentPixelPos.x / GRID_CELL_SIZE),
                     y: Math.round(character.currentPixelPos.y / GRID_CELL_SIZE),
@@ -250,18 +239,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         character.animationFrameId = requestAnimationFrame(step);
     }
-
+    
+    // --- CORRECTED: Click Handling ---
     function handleMapClick(e) {
-        if (!player.element) return;
+        if (!player.element || player.animationFrameId) return; // Prevent clicking while moving
 
-        const rect = map.getBoundingClientRect();
-        // Adjust click position for camera scroll
-        const clickX = e.clientX - rect.left + mapContainer.scrollLeft;
-        const clickY = e.clientY - rect.top + mapContainer.scrollTop;
+        // Use offsetX/offsetY for accurate coordinates relative to the map element
+        const clickX = e.offsetX;
+        const clickY = e.offsetY;
 
-        const targetGridX = Math.floor(clickX / GRID_CELL_SIZE);
-        const targetGridY = Math.floor(clickY / GRID_CELL_SIZE);
+        let targetGridX = Math.floor(clickX / GRID_CELL_SIZE);
+        let targetGridY = Math.floor(clickY / GRID_CELL_SIZE);
+        
+        // --- ADDED: Boundary check ---
+        const mapWidthInGrids = Math.floor(map.clientWidth / GRID_CELL_SIZE);
+        const mapHeightInGrids = Math.floor(map.clientHeight / GRID_CELL_SIZE);
+        targetGridX = Math.max(0, Math.min(targetGridX, mapWidthInGrids - 1));
+        targetGridY = Math.max(0, Math.min(targetGridY, mapHeightInGrids - 1));
 
+        // Check if target is a booth
         const isBooth = booths.some(b =>
             targetGridX >= b.position.x && targetGridX < b.position.x + b.size.width &&
             targetGridY >= b.position.y && targetGridY < b.position.y + b.size.height
@@ -271,13 +267,12 @@ document.addEventListener('DOMContentLoaded', () => {
         moveTo(player.id, { x: targetGridX * GRID_CELL_SIZE, y: targetGridY * GRID_CELL_SIZE });
     }
     
-    // --- NPC Behavior (Updated to use moveTo) ---
+    // --- NPC Behavior ---
     function startNpcBehavior() {
         characters.filter(c => c.type === 'npc').forEach(npc => {
             if (npc.patrolPoints && npc.patrolPoints.length > 0) {
                 let currentPatrolIndex = 0;
                 const patrol = () => {
-                     // Only start next patrol if not currently moving
                     if (npc.animationFrameId === null) {
                         currentPatrolIndex = (currentPatrolIndex + 1) % npc.patrolPoints.length;
                         const targetPoint = npc.patrolPoints[currentPatrolIndex];
@@ -372,7 +367,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Utils (No changes) ---
     function startCountdown() {
-        const eventEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        // Since it's 2025, let's set a future date.
+        const eventEndDate = new Date('2025-08-01T00:00:00');
         
         function updateTimer() {
             const difference = eventEndDate.getTime() - new Date().getTime();
@@ -384,12 +380,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 countdownTimerEl.textContent = `活動倒數：${days}天 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
             } else {
                  countdownTimerEl.textContent = "活動已結束";
-                 clearInterval(timerInterval);
+                 if(timerInterval) clearInterval(timerInterval);
             }
         }
 
-        updateTimer();
         const timerInterval = setInterval(updateTimer, 1000);
+        updateTimer();
     }
 
     // --- Start the app ---
