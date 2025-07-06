@@ -5,24 +5,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const playerNameInput = document.getElementById('player-name');
     const avatarSelectionContainer = document.getElementById('avatar-selection');
     const startBtn = document.getElementById('start-exhibition-btn');
-    const map = document.getElementById('exhibition-map');
+    const mapContainer = document.querySelector('.map-container'); // The "camera"
+    const map = document.getElementById('exhibition-map'); // The "world"
     const countdownTimerEl = document.getElementById('countdown-timer');
-
     const boothModal = document.getElementById('booth-modal');
     const boothModalBody = document.getElementById('booth-modal-body');
     const closeBoothModalBtn = document.getElementById('close-booth-modal-btn');
 
+    // --- Constants ---
+    const GRID_CELL_SIZE = 100;
+    const CHARACTER_SPEED = 200; // Pixels per second
+
     // --- Game State ---
-    let player = {
-        id: 'player',
-        name: '訪客',
-        avatar: '',
-        element: null
-    };
-    let characters = []; // Includes player and NPCs
+    let player = {};
+    let characters = [];
     let booths = [];
     let avatars = [];
-    const GRID_CELL_SIZE = 100; // 100px
 
     // --- Initialization ---
     async function initialize() {
@@ -41,7 +39,17 @@ document.addEventListener('DOMContentLoaded', () => {
             ]);
             avatars = avatarsData;
             booths = boothsData;
-            characters = npcsData.map(npc => ({...npc, type: 'npc'}));
+            
+            // Initialize characters with pixel positions and no animation frame
+            npcsData.forEach(npc => {
+                 characters.push({
+                    ...npc,
+                    type: 'npc',
+                    currentPixelPos: { x: npc.position.x * GRID_CELL_SIZE, y: npc.position.y * GRID_CELL_SIZE },
+                    animationFrameId: null
+                });
+            });
+
         } catch (error) {
             console.error("Failed to load data:", error);
             alert("資料載入失敗，請重新整理頁面。");
@@ -65,25 +73,19 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             avatarSelectionContainer.appendChild(avatarDiv);
         });
-        // Select first avatar by default
         const firstAvatar = avatarSelectionContainer.querySelector('.avatar-option');
-        if(firstAvatar) {
-            firstAvatar.click();
-        }
+        if (firstAvatar) firstAvatar.click();
     }
-    
+
     function setupEventListeners() {
         startBtn.addEventListener('click', startGame);
         map.addEventListener('click', handleMapClick);
         closeBoothModalBtn.addEventListener('click', closeBoothModal);
     }
-    
+
     // --- Game Flow ---
     function startGame() {
-        const playerName = playerNameInput.value.trim();
-        if (playerName) {
-            player.name = playerName;
-        }
+        player.name = playerNameInput.value.trim() || '訪客';
         if (!player.avatar) {
             alert('請選擇一個頭像！');
             return;
@@ -95,27 +97,34 @@ document.addEventListener('DOMContentLoaded', () => {
         spawnPlayer();
         renderAll();
         startNpcBehavior();
+        centerCameraOnPlayer(true); // Initial camera position (instant)
     }
-    
+
     function spawnPlayer() {
-        // Find a random empty spot to spawn
         let spawnX, spawnY, isOccupied;
         do {
-            spawnX = Math.floor(Math.random() * 15);
-            spawnY = Math.floor(Math.random() * 10);
-            isOccupied = booths.some(b => 
+            spawnX = Math.floor(Math.random() * (map.clientWidth / GRID_CELL_SIZE));
+            spawnY = Math.floor(Math.random() * (map.clientHeight / GRID_CELL_SIZE));
+            isOccupied = booths.some(b =>
                 spawnX >= b.position.x && spawnX < b.position.x + b.size.width &&
                 spawnY >= b.position.y && spawnY < b.position.y + b.size.height
             );
         } while (isOccupied);
-
-        player.position = { x: spawnX, y: spawnY };
-        characters.push({ ...player, type: 'player' });
+        
+        player = {
+            ...player,
+            id: 'player',
+            type: 'player',
+            position: { x: spawnX, y: spawnY },
+            currentPixelPos: { x: spawnX * GRID_CELL_SIZE, y: spawnY * GRID_CELL_SIZE },
+            animationFrameId: null
+        };
+        characters.push(player);
     }
 
     // --- Rendering ---
     function renderAll() {
-        map.innerHTML = ''; // Clear map
+        map.innerHTML = '';
         renderBooths();
         renderCharacters();
     }
@@ -145,66 +154,138 @@ document.addEventListener('DOMContentLoaded', () => {
             const charEl = document.createElement('div');
             charEl.className = 'character';
             charEl.id = char.id;
-             if(char.type === 'player'){
-                charEl.classList.add('user-player');
-            }
-            charEl.style.left = `${char.position.x * GRID_CELL_SIZE + (GRID_CELL_SIZE - 50) / 2}px`;
-            charEl.style.top = `${char.position.y * GRID_CELL_SIZE + (GRID_CELL_SIZE - 50) / 2}px`;
-            
+            if (char.type === 'player') charEl.classList.add('user-player');
+
+            // Set initial position from pixel coordinates
+            const charSize = 50;
+            charEl.style.left = `${char.currentPixelPos.x + (GRID_CELL_SIZE - charSize) / 2}px`;
+            charEl.style.top = `${char.currentPixelPos.y + (GRID_CELL_SIZE - charSize) / 2}px`;
+
             charEl.innerHTML = `
                 <div class="character-name">${char.name}</div>
                 <img src="${char.avatar || char.image}" alt="${char.name}">
                 <div class="character-speech-bubble" id="speech-${char.id}"></div>
             `;
             map.appendChild(charEl);
-
-            if(char.type === 'player') {
-                player.element = charEl;
-            }
+            char.element = charEl; // Store element reference
         });
     }
 
-    // --- Player & NPC Movement ---
+    // --- NEW: Camera Control ---
+    function centerCameraOnPlayer(instant = false) {
+        if (!player || !player.currentPixelPos) return;
+
+        const playerCenterX = player.currentPixelPos.x + GRID_CELL_SIZE / 2;
+        const playerCenterY = player.currentPixelPos.y + GRID_CELL_SIZE / 2;
+        
+        const viewportWidth = mapContainer.clientWidth;
+        const viewportHeight = mapContainer.clientHeight;
+
+        let targetX = playerCenterX - viewportWidth / 2;
+        let targetY = playerCenterY - viewportHeight / 2;
+
+        // Clamp camera to map boundaries
+        targetX = Math.max(0, Math.min(targetX, map.scrollWidth - viewportWidth));
+        targetY = Math.max(0, Math.min(targetY, map.scrollHeight - viewportHeight));
+        
+        if (instant) {
+            mapContainer.scrollLeft = targetX;
+            mapContainer.scrollTop = targetY;
+        } else {
+             mapContainer.scrollTo({
+                left: targetX,
+                top: targetY,
+                behavior: 'smooth' 
+             });
+        }
+    }
+
+    // --- NEW: Character Movement (ANIMATED) ---
+    function moveTo(charId, targetPixelPos) {
+        const character = characters.find(c => c.id === charId);
+        if (!character) return;
+
+        const startPos = { ...character.currentPixelPos };
+        const distance = Math.sqrt(Math.pow(targetPixelPos.x - startPos.x, 2) + Math.pow(targetPixelPos.y - startPos.y, 2));
+        if (distance < 1) return; // Already there
+
+        const duration = (distance / CHARACTER_SPEED) * 1000;
+        let startTime = null;
+
+        // Cancel any previous movement animation
+        if (character.animationFrameId) {
+            cancelAnimationFrame(character.animationFrameId);
+        }
+
+        function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Linear interpolation
+            character.currentPixelPos.x = startPos.x + (targetPixelPos.x - startPos.x) * progress;
+            character.currentPixelPos.y = startPos.y + (targetPixelPos.y - startPos.y) * progress;
+
+            // Update element's visual position
+            const charSize = 50;
+            character.element.style.left = `${character.currentPixelPos.x + (GRID_CELL_SIZE - charSize) / 2}px`;
+            character.element.style.top = `${character.currentPixelPos.y + (GRID_CELL_SIZE - charSize) / 2}px`;
+            
+            // If it's the player, move the camera
+            if (character.type === 'player') {
+                centerCameraOnPlayer();
+            }
+
+            if (progress < 1) {
+                character.animationFrameId = requestAnimationFrame(step);
+            } else {
+                // Animation finished, update logical grid position
+                character.position = {
+                    x: Math.round(character.currentPixelPos.x / GRID_CELL_SIZE),
+                    y: Math.round(character.currentPixelPos.y / GRID_CELL_SIZE),
+                };
+                character.animationFrameId = null;
+            }
+        }
+
+        character.animationFrameId = requestAnimationFrame(step);
+    }
+
     function handleMapClick(e) {
         if (!player.element) return;
+
         const rect = map.getBoundingClientRect();
-        const clickX = e.clientX - rect.left + map.scrollLeft;
-        const clickY = e.clientY - rect.top + map.scrollTop;
+        // Adjust click position for camera scroll
+        const clickX = e.clientX - rect.left + mapContainer.scrollLeft;
+        const clickY = e.clientY - rect.top + mapContainer.scrollTop;
 
         const targetGridX = Math.floor(clickX / GRID_CELL_SIZE);
         const targetGridY = Math.floor(clickY / GRID_CELL_SIZE);
 
-        // Check if target is a booth, if so, do not move character on top of it.
-        const isBooth = booths.some(b => 
+        const isBooth = booths.some(b =>
             targetGridX >= b.position.x && targetGridX < b.position.x + b.size.width &&
             targetGridY >= b.position.y && targetGridY < b.position.y + b.size.height
         );
-        if(isBooth) return; // Or handle walking to the booth entrance
+        if (isBooth) return;
 
-        moveCharacter(player.id, { x: targetGridX, y: targetGridY });
-    }
-
-    function moveCharacter(charId, newPos) {
-        const character = characters.find(c => c.id === charId);
-        const charEl = document.getElementById(charId);
-        if (character && charEl) {
-            character.position = newPos;
-            charEl.style.left = `${newPos.x * GRID_CELL_SIZE + (GRID_CELL_SIZE - 50) / 2}px`;
-            charEl.style.top = `${newPos.y * GRID_CELL_SIZE + (GRID_CELL_SIZE - 50) / 2}px`;
-        }
+        moveTo(player.id, { x: targetGridX * GRID_CELL_SIZE, y: targetGridY * GRID_CELL_SIZE });
     }
     
+    // --- NPC Behavior (Updated to use moveTo) ---
     function startNpcBehavior() {
         characters.filter(c => c.type === 'npc').forEach(npc => {
-            // NPC Patrol
             if (npc.patrolPoints && npc.patrolPoints.length > 0) {
                 let currentPatrolIndex = 0;
-                setInterval(() => {
-                    currentPatrolIndex = (currentPatrolIndex + 1) % npc.patrolPoints.length;
-                    moveCharacter(npc.id, npc.patrolPoints[currentPatrolIndex]);
-                }, 5000 + Math.random() * 2000); // Patrol every 5-7 seconds
+                const patrol = () => {
+                     // Only start next patrol if not currently moving
+                    if (npc.animationFrameId === null) {
+                        currentPatrolIndex = (currentPatrolIndex + 1) % npc.patrolPoints.length;
+                        const targetPoint = npc.patrolPoints[currentPatrolIndex];
+                        moveTo(npc.id, { x: targetPoint.x * GRID_CELL_SIZE, y: targetPoint.y * GRID_CELL_SIZE });
+                    }
+                };
+                setInterval(patrol, 5000 + Math.random() * 3000);
             }
-            // NPC Dialogue
             if (npc.dialogue && npc.dialogue.length > 0) {
                  setInterval(() => {
                     const speechBubble = document.getElementById(`speech-${npc.id}`);
@@ -214,12 +295,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         speechBubble.style.opacity = '1';
                         setTimeout(() => { speechBubble.style.opacity = '0'; }, 4000);
                     }
-                }, 8000 + Math.random() * 5000); // Speak every 8-13 seconds
+                }, 8000 + Math.random() * 5000);
             }
         });
     }
 
-    // --- Booth Modal ---
+    // --- Booth Modal (No significant changes) ---
     function openBoothModal(booth) {
         let linksHtml = '';
         if (booth.links && booth.links.length > 0) {
@@ -274,7 +355,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         boothModal.classList.add('active');
 
-        // Add event listeners for tabs
         boothModalBody.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 boothModalBody.querySelector('.tab-btn.active').classList.remove('active');
@@ -290,9 +370,9 @@ document.addEventListener('DOMContentLoaded', () => {
         boothModalBody.innerHTML = '';
     }
     
-    // --- Utils ---
+    // --- Utils (No changes) ---
     function startCountdown() {
-        const eventEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+        const eventEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         
         function updateTimer() {
             const difference = eventEndDate.getTime() - new Date().getTime();

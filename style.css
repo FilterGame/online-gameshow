@@ -51,22 +51,27 @@ header .container {
     margin-bottom: 1.5rem;
 }
 
+/* --- MODIFIED: Camera Viewport --- */
 .map-container {
-    overflow: auto;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     position: relative;
-    background-color: #f9f5e9;
+    background-color: #f0f0f0; /* Color for outside the map boundaries */
+    overflow: hidden; /* This is the key change to create a camera effect */
+    height: 600px; /* Give the viewport a fixed height */
 }
 
 .exhibition-grid {
     position: relative;
     width: 1500px; /* Corresponds to 15 * 100px cells */
     height: 1000px; /* Corresponds to 10 * 100px cells */
+    background-color: #f9f5e9;
     background-image:
         linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
         linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px);
     background-size: 100px 100px;
+    /* The transform property will be controlled by JS for camera movement */
+    transition: transform 0.1s linear;
 }
 
 .booth {
@@ -109,7 +114,7 @@ header .container {
     position: absolute;
     width: 50px;
     height: 50px;
-    transition: all 0.3s ease-out;
+    /* Transition is no longer needed here, movement is handled by JS */
     z-index: 10;
     cursor: pointer;
     display: flex;
@@ -150,7 +155,7 @@ header .container {
     pointer-events: none;
 }
 
-/* Modals */
+/* Modals (No changes from previous version) */
 .hidden { display: none !important; }
 
 .modal-overlay {
@@ -211,7 +216,7 @@ header .container {
 }
 
 
-/* Form & Buttons */
+/* Form & Buttons (No changes) */
 .form-group {
     margin-bottom: 1rem;
 }
@@ -245,7 +250,7 @@ button:hover {
     opacity: 0.9;
 }
 
-/* Avatar Selection */
+/* Avatar Selection (No changes) */
 .avatar-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
@@ -291,7 +296,7 @@ button:hover {
     opacity: 1;
 }
 
-/* Booth Modal Content */
+/* Booth Modal Content (No changes) */
 .booth-header h2 {
     margin: 0;
     font-size: 1.8rem;
