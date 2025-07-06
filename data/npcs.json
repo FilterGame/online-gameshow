@@ -1,0 +1,41 @@
+[
+  {
+    "id": "npc-1",
+    "name": "導覽員",
+    "avatar": "assets/images/guide.png",
+    "dialogue": [
+      "歡迎來到線上展覽！",
+      "有什麼需要幫忙的嗎？",
+      "別忘了去看看轉角的藝術展喔！"
+    ],
+    "position": { "x": 7, "y": 8 }
+  },
+  {
+    "id": "npc-2",
+    "name": "路人甲",
+    "avatar": "assets/images/visitor1.png",
+    "dialogue": [
+      "這裡好熱鬧啊...",
+      "那個遊戲攤位看起來很有趣。",
+      "我該先去哪裡呢？"
+    ],
+    "position": { "x": 1, "y": 5 },
+    "patrolPoints": [
+        { "x": 1, "y": 5 },
+        { "x": 4, "y": 5 },
+        { "x": 4, "y": 1 },
+        { "x": 1, "y": 1 }
+    ]
+  },
+  {
+    "id": "npc-3",
+    "name": "攝影師",
+    "avatar": "assets/images/visitor2.png",
+    "dialogue": [
+      "這裡的光線真不錯。",
+      "讓我來拍幾張照片。",
+      "哇！那個作品好美！"
+    ],
+    "position": { "x": 10, "y": 4 }
+  }
+]

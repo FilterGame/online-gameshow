@@ -1,0 +1,26 @@
+[
+  {
+    "id": "avatar-1",
+    "name": "預設訪客",
+    "image": "assets/images/visitor.png",
+    "description": "一個充滿好奇心的標準訪客。"
+  },
+  {
+    "id": "avatar-2",
+    "name": "冒險家",
+    "image": "assets/images/adventurer.png",
+    "description": "熱愛探索未知事物的冒險家。"
+  },
+  {
+    "id": "avatar-3",
+    "name": "藝術家",
+    "image": "assets/images/artist.png",
+    "description": "對美有著獨特見解的藝術家。"
+  },
+    {
+    "id": "avatar-4",
+    "name": "工程師",
+    "image": "assets/images/engineer.png",
+    "description": "對科技充滿熱情的工程師。"
+  }
+]

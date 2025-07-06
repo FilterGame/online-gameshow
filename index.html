@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動式線上展覽</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="player-setup-modal" class="modal-overlay active">
+        <div class="modal-content">
+            <h2>歡迎來到線上展覽</h2>
+            <p>請輸入您的名稱並選擇一個頭像</p>
+            <div class="form-group">
+                <label for="player-name">你的名字：</label>
+                <input type="text" id="player-name" placeholder="訪客123">
+            </div>
+            <div class="form-group">
+                <label>選擇頭像：</label>
+                <div id="avatar-selection" class="avatar-grid">
+                    </div>
+            </div>
+            <button id="start-exhibition-btn">進入展覽</button>
+        </div>
+    </div>
+
+    <div id="exhibition-container" class="hidden">
+        <header>
+            <div class="container">
+                <h1>互動式線上展覽</h1>
+                <div id="countdown-timer"></div>
+            </div>
+        </header>
+
+        <main class="container">
+            <div class="guide">
+                <h2>參觀指南</h2>
+                <p>點擊地圖移動您的角色，靠近並點擊攤位可開啟介紹。祝您參觀愉快！</p>
+            </div>
+            <div class="map-container">
+                <div id="exhibition-map" class="exhibition-grid">
+                    </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="booth-modal" class="modal-overlay">
+        <div class="modal-content large">
+            <div id="booth-modal-body">
+                </div>
+            <button id="close-booth-modal-btn" class="modal-close-btn">關閉</button>
+        </div>
+    </div>
+
+
+    <script src="script.js"></script>
+</body>
+</html>

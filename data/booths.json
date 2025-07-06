@@ -1,0 +1,48 @@
+[
+  {
+    "id": "booth-1",
+    "name": "遊戲攤位 A",
+    "shortDescription": "展示最新的獨立遊戲作品",
+    "description": "<h3>遊戲攤位 A</h3><p>這是一個展示最新獨立遊戲作品的攤位。我們有多款精彩的遊戲等你來體驗！</p><h4>特色遊戲</h4><ul><li>冒險遊戲：探索神秘世界</li><li>解謎遊戲：挑戰你的智慧</li><li>動作遊戲：測試你的反應能力</li></ul><p>歡迎來訪並體驗我們的遊戲！</p>",
+    "position": { "x": 2, "y": 2 },
+    "size": { "width": 1, "height": 1 },
+    "posterImage": "assets/images/placeholder_poster.png",
+    "category": "遊戲",
+    "videoUrl": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    "links": [
+      { "title": "官方網站", "url": "https://example.com" },
+      { "title": "Steam 頁面", "url": "https://store.steampowered.com" }
+    ],
+    "images": [
+      { "url": "assets/images/placeholder_gallery.png", "caption": "遊戲截圖 1" },
+      { "url": "assets/images/placeholder_gallery.png", "caption": "遊戲截圖 2" }
+    ]
+  },
+  {
+    "id": "booth-2",
+    "name": "藝術展示 B",
+    "shortDescription": "當代數位藝術作品展示",
+    "description": "<h3>藝術展示 B</h3><p>這是一個展示當代數位藝術作品的攤位。我們展示了多位藝術家的創新作品。</p><h4>展示作品</h4><ul><li>數位繪畫</li><li>互動裝置藝術</li><li>虛擬實境體驗</li></ul><p>歡迎來訪並欣賞我們的藝術作品！</p>",
+    "position": { "x": 5, "y": 3 },
+    "size": { "width": 1, "height": 1 },
+    "posterImage": "assets/images/placeholder_poster.png",
+    "category": "藝術",
+    "images": [
+      { "url": "assets/images/placeholder_gallery.png", "caption": "藝術作品 1" },
+      { "url": "assets/images/placeholder_gallery.png", "caption": "藝術作品 2" }
+    ]
+  },
+  {
+    "id": "booth-3",
+    "name": "科技展示 C",
+    "shortDescription": "最新科技產品與創新",
+    "description": "<h3>科技展示 C</h3><p>這是一個展示最新科技產品與創新的攤位。我們展示了多項前沿科技。</p>",
+    "position": { "x": 8, "y": 5 },
+    "size": { "width": 1, "height": 1 },
+    "posterImage": "assets/images/placeholder_poster.png",
+    "category": "科技",
+    "links": [
+      { "title": "官方網站", "url": "https://example.com" }
+    ]
+  }
+]
